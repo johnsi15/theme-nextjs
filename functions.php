@@ -48,10 +48,25 @@ function set_headless_preview_link( string $link, WP_Post $post ): string {
     [
       'secret' => HEADLESS_SECRET,
       'id' => $post->ID,
+      'post_type' => $post->post_type,
     ],
     esc_url_raw( esc_url_raw( "$frontendUrl/api/preview" ))
   );
 }
+
+/**
+ * Dynamically register REST preview filters for all public post types
+ */
+function register_headless_rest_preview_filters() {
+  // Get all public post types
+  $post_types = get_post_types(['public' => true], 'names');
+  
+  foreach ($post_types as $post_type) {
+    // Register the filter for each post type
+    add_filter("rest_prepare_{$post_type}", 'set_headless_rest_preview_link', 10, 2);
+  }
+}
+add_action('rest_api_init', 'register_headless_rest_preview_filters');
 
 add_filter( 'rest_prepare_page', 'set_headless_rest_preview_link', 10, 2 );
 add_filter( 'rest_prepare_post', 'set_headless_rest_preview_link' , 10, 2 );
@@ -94,6 +109,7 @@ function set_headless_rest_preview_link( WP_REST_Response $response, WP_Post $po
  * @param int $post_ID The ID of the post being saved.
  * @return void
  */
+
 // add_action('transition_post_status', 'headless_revalidate', 10, 3);
 function headless_revalidate(string $new_status, string $old_status, object $post ): void
 {
@@ -286,4 +302,22 @@ add_action( 'graphql_register_types', function() {
 			return get_post_meta( $post->databaseId, 'wpb_post_views_count', true );
 		}
 	] );
+});
+
+add_action('graphql_register_types', function() {
+  // Campo personalizado para URI headless en ContentNode
+  register_graphql_field( 'ContentNode', 'headlessUri', [
+    'type' => 'String',
+    'resolve' => function( $contentNode ) {
+      $permalink = get_permalink( $contentNode->databaseId );
+      $frontendUrl = HEADLESS_URL;
+      
+      // Reemplaza la URL del sitio con la del frontend, similar a REST
+      if ( false !== stristr( $permalink, get_site_url() ) ) {
+        return str_ireplace( get_site_url(), $frontendUrl, $permalink );
+      }
+      
+      return $permalink; // Fallback
+    }
+  ]);
 });
