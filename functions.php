@@ -35,6 +35,44 @@ function home_url_as_api_url($url)
   return $url;
 }
 
+add_filter( 'post_type_link', 'set_headless_cpt_permalink', 10, 2 );
+
+function set_headless_cpt_permalink( $permalink, $post ) {
+  if ( !is_object( $post ) || !isset( $post->post_type ) ) {
+    return $permalink;
+  }
+  
+  if ( !defined( 'HEADLESS_URL' ) || empty( HEADLESS_URL ) ) {
+    return $permalink;
+  }
+
+  $frontendUrl = HEADLESS_URL;
+
+  $routes = [
+    'columna' => 'opinion/columnas',
+    'editorial' => 'opinion/editoriales',
+    'pilocatura' => 'opinion/pilocaturas',
+    // 'especial' => 'especiales-y-eventos',
+  ];
+
+  if ( isset( $routes[$post->post_type] ) ) {
+    if ( empty( $post->post_name ) ) {
+      return $permalink;
+    }
+
+    // Limpiar la URL base (eliminar barras duplicadas)
+    $frontendUrl = rtrim( $frontendUrl, '/' );
+    $route = trim( $routes[$post->post_type], '/' );
+    
+    $base_url = $frontendUrl . '/' . $route . '/';
+    $slug = $post->post_name;
+
+    return esc_url_raw( $base_url . $slug );
+  }
+
+  return $permalink;
+}
+
 /**
  * Customize the preview button in the WordPress admin.
  *
