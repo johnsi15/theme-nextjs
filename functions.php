@@ -154,6 +154,7 @@ function set_headless_rest_preview_link( WP_REST_Response $response, WP_Post $po
  * @return void
  */
 
+// Se comento porque se creo un Plugin para manejar esto. NAME: wp-hook-nextjs-revalidate
 // add_action('transition_post_status', 'headless_revalidate', 10, 3);
 function headless_revalidate(string $new_status, string $old_status, object $post ): void
 {
